@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/constants/app_colors.dart';
+import '../providers/auth_provider.dart';
 import '../providers/property_provider.dart';
 import '../models/property_model.dart';
 
@@ -114,6 +115,36 @@ class _PublishPropertyScreenState extends ConsumerState<PublishPropertyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    final isOwner = authState.user?.role == 'owner';
+
+    if (!isOwner) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Publier une propriété'),
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'Fonctionnalité réservée aux propriétaires',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Créez un compte propriétaire pour publier vos biens',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(

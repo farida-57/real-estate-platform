@@ -2,6 +2,8 @@ class MessageModel {
   final String id;
   final String senderId;
   final String receiverId;
+  final String? senderName;
+  final String? receiverName;
   final String? propertyId;
   final String content;
   final bool isRead;
@@ -11,6 +13,8 @@ class MessageModel {
     required this.id,
     required this.senderId,
     required this.receiverId,
+    this.senderName,
+    this.receiverName,
     this.propertyId,
     required this.content,
     required this.isRead,
@@ -22,6 +26,8 @@ class MessageModel {
       id: json['_id'] ?? json['id'],
       senderId: json['sender']?['_id'] ?? json['sender'] ?? '',
       receiverId: json['receiver']?['_id'] ?? json['receiver'] ?? '',
+      senderName: json['sender']?['name'] ?? '',
+      receiverName: json['receiver']?['name'] ?? '',
       propertyId: json['property']?['_id'] ?? json['property'],
       content: json['content'] ?? '',
       isRead: json['isRead'] ?? false,

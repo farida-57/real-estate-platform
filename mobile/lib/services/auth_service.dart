@@ -144,8 +144,67 @@ class AuthService {
     await _storage.delete(key: 'jwt_token');
   }
 
-  Future<bool> isAuthenticated() async {
-    final token = await _storage.read(key: 'jwt_token');
-    return token != null;
+  Future<bool> updateProfile(Map<String, dynamic> data) async {
+    try {
+      print('[AuthService] Updating profile');
+      final response = await _apiService.put('/auth/profile', data: data);
+
+      print('[AuthService] Update profile response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        throw Exception(
+          'Failed to update profile: ${response.data['message'] ?? 'Unknown error'}',
+        );
+      }
+    } catch (e) {
+      print('[AuthService] Update profile error: $e');
+      rethrow;
+    }
+  }
+
+  Future<bool> changePassword(String oldPassword, String newPassword) async {
+    try {
+      print('[AuthService] Changing password');
+      final response = await _apiService.put('/auth/profile', data: {
+        'oldPassword': oldPassword,
+        'newPassword': newPassword,
+      });
+
+      print('[AuthService] Change password response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        throw Exception(
+          'Failed to change password: ${response.data['message'] ?? 'Unknown error'}',
+        );
+      }
+    } catch (e) {
+      print('[AuthService] Change password error: $e');
+      rethrow;
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    try {
+      print('[AuthService] Deleting account');
+      final response = await _apiService.delete('/auth/profile');
+
+      print('[AuthService] Delete account response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        await logout();
+        return true;
+      } else {
+        throw Exception(
+          'Failed to delete account: ${response.data['message'] ?? 'Unknown error'}',
+        );
+      }
+    } catch (e) {
+      print('[AuthService] Delete account error: $e');
+      rethrow;
+    }
   }
 }

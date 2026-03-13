@@ -57,8 +57,47 @@ const removeFavorite = async (req, res) => {
     }
 };
 
+// @desc    Basculer l'état favori d'une annonce (ajouter/retirer)
+// @route   POST /api/favorites/toggle
+const toggleFavorite = async (req, res) => {
+    try {
+        const { propertyId } = req.body;
+        if (!propertyId) {
+            return res.status(400).json({ message: 'L\'ID de la propriété est requis' });
+        }
+
+        // Vérifier si le favori existe déjà
+        const existingFavorite = await Favorite.findOne({
+            user: req.user?.id,
+            property: propertyId
+        });
+
+        if (existingFavorite) {
+            // Retirer des favoris
+            await Favorite.findOneAndDelete({
+                user: req.user?.id,
+                property: propertyId
+            });
+            res.json({ message: 'Annonce retirée des favoris', isFavorite: false });
+        } else {
+            // Ajouter aux favoris
+            const favorite = await Favorite.create({
+                user: req.user?.id,
+                property: propertyId
+            });
+            res.json({ message: 'Annonce ajoutée aux favoris', isFavorite: true });
+        }
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({ message: 'Cette propriété est déjà dans vos favoris' });
+        }
+        res.status(500).json({ message: 'Erreur lors de la gestion des favoris', error: error.message });
+    }
+};
+
 module.exports = {
     addFavorite,
     getMyFavorites,
-    removeFavorite
+    removeFavorite,
+    toggleFavorite
 };

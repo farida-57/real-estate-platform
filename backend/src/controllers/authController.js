@@ -126,8 +126,15 @@ const updateUserProfile = async (req, res) => {
         user.name = req.body.name || user.name;
         user.phone = req.body.phone || user.phone;
         
-        if (req.body.password) {
-            user.password = req.body.password;
+        if (req.body.newPassword) {
+            // Verify old password if changing password
+            if (req.body.oldPassword) {
+                const isOldPasswordValid = await user.comparePassword(req.body.oldPassword);
+                if (!isOldPasswordValid) {
+                    return res.status(400).json({ message: 'Ancien mot de passe incorrect' });
+                }
+            }
+            user.password = req.body.newPassword;
         }
 
         if (req.file) {

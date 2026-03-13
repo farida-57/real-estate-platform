@@ -77,4 +77,49 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _authService.logout();
     state = AuthState();
   }
+
+  Future<bool> updateProfile(Map<String, dynamic> data) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final success = await _authService.updateProfile(data);
+      if (success) {
+        // Refresh profile
+        final user = await _authService.getProfile();
+        state = state.copyWith(user: user, isLoading: false);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> changePassword(String oldPassword, String newPassword) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final success = await _authService.changePassword(oldPassword, newPassword);
+      state = state.copyWith(isLoading: false);
+      return success;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final success = await _authService.deleteAccount();
+      if (success) {
+        state = AuthState();
+      } else {
+        state = state.copyWith(isLoading: false);
+      }
+      return success;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
+    }
+  }
 }

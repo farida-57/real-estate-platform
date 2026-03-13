@@ -1,14 +1,242 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../providers/property_provider.dart';
 import '../core/constants/app_colors.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final ImagePicker _picker = ImagePicker();
+
+  void _showChangePasswordDialog() {
+    final oldPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Changer de mot de passe'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: oldPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Mot de passe actuel',
+                ),
+                validator: (value) {
+                  if (value?.isEmpty ?? true) return 'Requis';
+                  return null;
+                },
+              ),
+              TextFormField(
+                controller: newPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Nouveau mot de passe',
+                ),
+                validator: (value) {
+                  if (value?.isEmpty ?? true) return 'Requis';
+                  if (value!.length < 6) return 'Minimum 6 caractères';
+                  return null;
+                },
+              ),
+              TextFormField(
+                controller: confirmPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Confirmer le mot de passe',
+                ),
+                validator: (value) {
+                  if (value != newPasswordController.text) {
+                    return 'Les mots de passe ne correspondent pas';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState?.validate() ?? false) {
+                final success = await ref.read(authProvider.notifier).changePassword(
+                  oldPasswordController.text,
+                  newPasswordController.text,
+                );
+                if (success && mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Mot de passe changé avec succès')),
+                  );
+                }
+              }
+            },
+            child: const Text('Changer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le compte'),
+        content: const Text(
+          'Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final success = await ref.read(authProvider.notifier).deleteAccount();
+              if (success && mounted) {
+                Navigator.of(context).pop();
+                context.go('/');
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _changePhoto() async {
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Changer de photo'),
+        content: const Text('Choisir la source de l\'image'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(ImageSource.camera),
+            child: const Text('Caméra'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(ImageSource.gallery),
+            child: const Text('Galerie'),
+          ),
+        ],
+      ),
+    );
+
+    if (source != null) {
+      final pickedFile = await _picker.pickImage(source: source);
+      if (pickedFile != null) {
+        // TODO: Upload the image
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo changée (upload à implémenter)')),
+        );
+      }
+    }
+  }
+
+  void _showMyListings() {
+    // Navigate to search screen with owner filter
+    ref.read(searchFilterProvider.notifier).update((state) => {
+      ...state,
+      'owner': ref.read(authProvider).user?.id ?? '',
+    });
+    context.go('/search');
+  }
+
+  void _showLanguageDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Changer de langue'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Français'),
+              onTap: () {
+                // TODO: Implement language change
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Langue changée en Français')),
+                );
+              },
+            ),
+            ListTile(
+              title: const Text('English'),
+              onTap: () {
+                // TODO: Implement language change
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Language changed to English')),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showNotificationsDialog() {
+    bool pushNotifications = true;
+    bool emailNotifications = true;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Notifications'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile(
+                title: const Text('Notifications push'),
+                value: pushNotifications,
+                onChanged: (value) => setState(() => pushNotifications = value),
+              ),
+              SwitchListTile(
+                title: const Text('Notifications email'),
+                value: emailNotifications,
+                onChanged: (value) => setState(() => emailNotifications = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
 
@@ -127,20 +355,26 @@ class ProfileScreen extends ConsumerWidget {
               ),
               child: Column(
                 children: [
-                  _buildSettingsItem(Icons.history, 'Mes annonces', () {}),
+                  _buildSettingsItem(Icons.history, 'Mes annonces', _showMyListings),
                   const Divider(color: AppColors.border, height: 1),
-                  _buildSettingsItem(Icons.language, 'Langue', () {}),
+                  _buildSettingsItem(Icons.language, 'Langue', _showLanguageDialog),
                   const Divider(color: AppColors.border, height: 1),
                   _buildSettingsItem(
                     Icons.notifications_none,
                     'Notifications',
-                    () {},
+                    _showNotificationsDialog,
                   ),
                   const Divider(color: AppColors.border, height: 1),
                   _buildSettingsItem(
                     Icons.security,
                     'Changer de mot de passe',
-                    () {},
+                    _showChangePasswordDialog,
+                  ),
+                  const Divider(color: AppColors.border, height: 1),
+                  _buildSettingsItem(
+                    Icons.photo_camera,
+                    'Changer de photo',
+                    _changePhoto,
                   ),
                 ],
               ),
@@ -150,7 +384,7 @@ class ProfileScreen extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: _showDeleteAccountDialog,
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
                 label: const Text('Supprimer le compte'),
                 style: OutlinedButton.styleFrom(

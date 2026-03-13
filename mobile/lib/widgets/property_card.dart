@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/property_model.dart';
 import '../core/constants/app_colors.dart';
 import 'package:intl/intl.dart';
 
 import 'package:go_router/go_router.dart';
+import '../providers/favorite_provider.dart';
 
-class PropertyCard extends StatelessWidget {
+class PropertyCard extends ConsumerWidget {
   final PropertyModel property;
   final VoidCallback? onTap;
 
   const PropertyCard({required this.property, this.onTap, super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final favoritesAsync = ref.watch(favoritesProvider);
+    final isFavorite = favoritesAsync.maybeWhen(
+      data: (favorites) => favorites.any((fav) => fav.id == property.id),
+      orElse: () => false,
+    );
+
     final currencyFormat = NumberFormat.currency(
       locale: 'fr',
       symbol: 'XOF',
@@ -78,10 +86,15 @@ class PropertyCard extends StatelessWidget {
                   child: CircleAvatar(
                     backgroundColor: Colors.white.withOpacity(0.9),
                     radius: 18,
-                    child: const Icon(
-                      Icons.favorite_border_rounded,
-                      color: AppColors.primary,
-                      size: 20,
+                    child: IconButton(
+                      icon: Icon(
+                        isFavorite ? Icons.favorite : Icons.favorite_border_rounded,
+                        color: isFavorite ? Colors.red : AppColors.primary,
+                        size: 20,
+                      ),
+                      onPressed: () async {
+                        await ref.read(favoritesProvider.notifier).toggleFavorite(property.id);
+                      },
                     ),
                   ),
                 ),

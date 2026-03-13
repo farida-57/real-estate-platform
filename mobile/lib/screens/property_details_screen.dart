@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/property_model.dart';
 import '../core/constants/app_colors.dart';
 import 'package:intl/intl.dart';
 import '../providers/property_provider.dart';
+import '../providers/favorite_provider.dart';
+import '../providers/auth_provider.dart';
 
 class PropertyDetailsScreen extends ConsumerWidget {
   final String propertyId;
@@ -16,24 +19,31 @@ class PropertyDetailsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final propertiesAsync = ref.watch(propertiesProvider);
+    final favoritesAsync = ref.watch(favoritesProvider);
+    final authState = ref.watch(authProvider);
+    final isFavorite = favoritesAsync.maybeWhen(
+      data: (favorites) => favorites.any((fav) => fav.id == propertyId),
+      orElse: () => false,
+    );
+
     final currencyFormat = NumberFormat.currency(
       locale: 'fr',
       symbol: 'XOF',
       decimalDigits: 0,
     );
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      body: propertiesAsync.when(
-        data: (properties) {
-          final PropertyModel property;
-          try {
-            property = properties.firstWhere((p) => p.id == propertyId);
-          } catch (e) {
-            return const Center(child: Text('Property not found'));
-          }
+    return propertiesAsync.when(
+      data: (properties) {
+        final PropertyModel property;
+        try {
+          property = properties.firstWhere((p) => p.id == propertyId);
+        } catch (e) {
+          return Scaffold(body: const Center(child: Text('Property not found')));
+        }
 
-          return CustomScrollView(
+        return Scaffold(
+          extendBodyBehindAppBar: true,
+          body: CustomScrollView(
             slivers: [
               // Image Header
               SliverAppBar(
@@ -46,7 +56,10 @@ class PropertyDetailsScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(8.0),
                   child: CircleAvatar(
                     backgroundColor: Colors.black26,
-                    child: BackButton(color: Colors.white),
+                    child: IconButton(
+                      icon: const Icon(Icons.home, color: Colors.white),
+                      onPressed: () => GoRouter.of(context).go('/search'),
+                    ),
                   ),
                 ),
                 flexibleSpace: FlexibleSpaceBar(
@@ -89,7 +102,28 @@ class PropertyDetailsScreen extends ConsumerWidget {
                   ),
                 ),
                 actions: [
-                  _buildCircleAction(Icons.favorite_border_rounded, () {}),
+                  CircleAvatar(
+                    backgroundColor: Colors.black26,
+                    radius: 18,
+                    child: IconButton(
+                      icon: Icon(
+                        isFavorite ? Icons.favorite : Icons.favorite_border_rounded,
+                        color: isFavorite ? Colors.red : Colors.white,
+                        size: 20,
+                      ),
+                      onPressed: authState.user == null
+                          ? () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Veuillez vous connecter pour ajouter aux favoris'),
+                                ),
+                              );
+                            }
+                          : () async {
+                              await ref.read(favoritesProvider.notifier).toggleFavorite(propertyId);
+                            },
+                    ),
+                  ),
                   _buildCircleAction(Icons.share_rounded, () {}),
                   const SizedBox(width: 8),
                 ],
@@ -247,52 +281,72 @@ class PropertyDetailsScreen extends ConsumerWidget {
                 ),
               ),
             ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Erreur: $error')),
-      ),
-      bottomSheet: Container(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
+          ),
+          bottomSheet: Container(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, -5),
                 ),
-                child: const Text('CONTACTER L\'AGENT'),
-              ),
+              ],
             ),
-            const SizedBox(width: 16),
-            InkWell(
-              onTap: () {},
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.secondary.withOpacity(0.1),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (property.ownerId.isNotEmpty) {
+                        GoRouter.of(context).push('/chat/${property.ownerId}');
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Impossible de contacter le propriétaire pour le moment.'),
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                    ),
+                    child: const Text('CONTACTER L\'AGENT'),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                InkWell(
+                  onTap: () {
+                    if (property.ownerId.isNotEmpty) {
+                      GoRouter.of(context).push('/chat/${property.ownerId}');
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Impossible de contacter le propriétaire pour le moment.'),
+                        ),
+                      );
+                    }
+                  },
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.secondary.withOpacity(0.3)),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.secondary.withOpacity(0.3)),
+                    ),
+                    child: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primary),
+                  ),
                 ),
-                child: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primary),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
+      loading: () => Scaffold(body: const Center(child: CircularProgressIndicator())),
+      error: (error, _) => Scaffold(body: Center(child: Text('Erreur: $error'))),
     );
   }
 

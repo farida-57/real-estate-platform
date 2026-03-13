@@ -84,6 +84,7 @@ class PropertyModel {
   final PropertyFeatures features;
   final List<String> images;
   final String ownerId;
+  final String ownerName;
   final PropertyStatus status;
   final DateTime createdAt;
 
@@ -98,6 +99,7 @@ class PropertyModel {
     required this.features,
     required this.images,
     required this.ownerId,
+    required this.ownerName,
     required this.status,
     required this.createdAt,
   });
@@ -114,8 +116,9 @@ class PropertyModel {
       propertyType: json['propertyType'],
       location: PropertyLocation.fromJson(json['location']),
       features: PropertyFeatures.fromJson(json['features']),
-      images: List<String>.from(json['images'] ?? []),
+      images: List<String>.from(json['images'] ?? []).map((img) => 'http://192.168.100.223:5000$img').toList(),
       ownerId: json['owner']?['_id'] ?? json['owner'] ?? '',
+      ownerName: json['owner']?['name'] ?? '',
       status: _parseStatus(json['status']),
       createdAt: DateTime.parse(json['createdAt']),
     );
