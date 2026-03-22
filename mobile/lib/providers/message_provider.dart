@@ -36,6 +36,8 @@ class MessageNotifier extends StateNotifier<MessageState> {
     fetchUnreadCount();
   }
 
+  /// Fetches the conversation list (last message per partner).
+  /// Backend GET /messages returns: List<{ partner, lastMessage, unreadCount }>
   Future<void> fetchMessages() async {
     if (state.messages is! AsyncData) {
       state = state.copyWith(messages: const AsyncValue.loading());
@@ -49,14 +51,41 @@ class MessageNotifier extends StateNotifier<MessageState> {
         state = state.copyWith(messages: const AsyncValue.data([]));
         return;
       }
-      final messagesList = (raw as List<dynamic>)
-          .map((item) => MessageModel.fromJson(item))
-          .toList();
+
+      // Backend returns conversation summaries: { partner, lastMessage, unreadCount }
+      // Extract the lastMessage from each summary to build the flat list used by MessageListScreen
+      final messagesList = <MessageModel>[];
+      for (final item in raw) {
+        if (item is Map<String, dynamic>) {
+          final lastMsg = item['lastMessage'];
+          if (lastMsg != null && lastMsg is Map<String, dynamic>) {
+            try {
+              messagesList.add(MessageModel.fromJson(lastMsg));
+            } catch (_) {}
+          }
+        }
+      }
 
       state = state.copyWith(messages: AsyncValue.data(messagesList));
       await fetchUnreadCount();
     } catch (e, st) {
       state = state.copyWith(messages: AsyncValue.error(e, st));
+    }
+  }
+
+  /// Fetches the full conversation thread with a specific user.
+  /// Calls GET /messages/:userId on the backend.
+  Future<List<MessageModel>> fetchConversation(String otherUserId) async {
+    try {
+      final apiService = _ref.read(apiServiceProvider);
+      final response = await apiService.get('/messages/$otherUserId');
+      final dynamic raw = response.data;
+      if (raw == null || raw is! List) return [];
+      return (raw as List<dynamic>)
+          .map((item) => MessageModel.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
     }
   }
 
@@ -110,15 +139,12 @@ class MessageNotifier extends StateNotifier<MessageState> {
   }
 }
 
+/// Fetches the full conversation thread with [otherUserId] directly from the API.
 final chatProvider = FutureProvider.family<List<MessageModel>, String>((
   ref,
   otherUserId,
 ) async {
-  final messageState = ref.watch(messagesProvider);
-  return messageState.messages.maybeWhen(
-    data: (list) => list
-        .where((m) => m.senderId == otherUserId || m.receiverId == otherUserId)
-        .toList(),
-    orElse: () => [],
-  );
+  final notifier = ref.read(messagesProvider.notifier);
+  final messages = await notifier.fetchConversation(otherUserId);
+  return messages;
 });

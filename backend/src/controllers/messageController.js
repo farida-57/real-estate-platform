@@ -14,7 +14,12 @@ const sendMessage = async (req, res) => {
             content
         });
 
-        res.status(201).json(message);
+        // Populate sender and receiver so the mobile client gets full user objects
+        const populated = await Message.findById(message._id)
+            .populate('sender', 'name email photo')
+            .populate('receiver', 'name email photo');
+
+        res.status(201).json(populated);
     } catch (error) {
         res.status(500).json({ message: 'Erreur lors de l\'envoi du message', error: error.message });
     }

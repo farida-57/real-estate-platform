@@ -75,7 +75,7 @@ class _PublishPropertyScreenState extends ConsumerState<PublishPropertyScreen> {
 
   Future<void> _handleSubmit() async {
     if (_formKey.currentState!.validate()) {
-      // In a real app, we would upload images first to get URLs
+      // For now, use simple data without file uploads
       final propertyData = {
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -85,10 +85,6 @@ class _PublishPropertyScreenState extends ConsumerState<PublishPropertyScreen> {
         'location': {
           'address': _addressController.text.trim(),
           'city': _cityController.text.trim(),
-          'coordinates': {
-            'lat': 0.0,
-            'lng': 0.0,
-          },
         },
         'features': {
           'area': double.parse(_areaController.text),
@@ -96,19 +92,40 @@ class _PublishPropertyScreenState extends ConsumerState<PublishPropertyScreen> {
           'bathrooms': int.parse(_bathroomsController.text),
         },
         'amenities': _selectedAmenities.toList(),
-        'images': [
-          'https://via.placeholder.com/800x600',
-        ], // Placeholder for now
+        'images': [], // Empty for now
+        'documents': {
+          'idCard': '',
+          'titleDeedOrLease': '',
+        },
       };
 
-      final success = await ref
-          .read(propertiesProvider.notifier)
-          .createProperty(propertyData);
-      if (success && mounted) {
+      try {
+        final success = await ref
+            .read(propertiesProvider.notifier)
+            .createProperty(propertyData);
+        if (success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Propriété publiée avec succès !'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          context.go('/search');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Erreur lors de la publication. Vérifiez votre connexion.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Property published successfully!')),
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
-        context.go('/search');
       }
     }
   }

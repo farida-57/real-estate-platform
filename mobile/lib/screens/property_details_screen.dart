@@ -300,7 +300,7 @@ class PropertyDetailsScreen extends ConsumerWidget {
                   child: ElevatedButton(
                     onPressed: () {
                       if (property.ownerId.isNotEmpty) {
-                        GoRouter.of(context).push('/chat/${property.ownerId}');
+                        GoRouter.of(context).push('/chat?id=${property.ownerId}');
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -320,7 +320,7 @@ class PropertyDetailsScreen extends ConsumerWidget {
                 InkWell(
                   onTap: () {
                     if (property.ownerId.isNotEmpty) {
-                      GoRouter.of(context).push('/chat/${property.ownerId}');
+                      GoRouter.of(context).push('/chat?id=${property.ownerId}');
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(

@@ -7,7 +7,7 @@ class ApiService {
 
   // Base URL - Use 10.0.2.2 for Android Emulator, or your machine local IP
   // static const String baseUrl = 'http://10.0.2.2:5000/api'; // Émulateur Android
-  static const String baseUrl = 'http://192.168.100.223:5000/api'; 
+  static const String baseUrl = 'http://192.168.100.56:5000/api'; 
 
   ApiService() {
     _dio.options.baseUrl = baseUrl;

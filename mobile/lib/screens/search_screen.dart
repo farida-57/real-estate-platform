@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/property_provider.dart';
 import '../widgets/property_card.dart';
 import '../core/constants/app_colors.dart';
-
+import 'package:go_router/go_router.dart';
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -105,7 +105,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     return PropertyCard(
                       property: properties[index],
                       onTap: () {
-                        // context.push('/property/${properties[index].id}');
+                        context.push('/property/${properties[index].id}');
                       },
                     );
                   },
